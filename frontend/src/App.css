@@ -1,0 +1,120 @@
+:root {
+  --primary: #2A5C82;    /* Deep matte blue */
+  --secondary: #5C8D97;  /* Muted teal */
+  --accent: #FF7F50;     /* Coral accent */
+  --light: #F5F7FA;      /* Off-white */
+  --dark: #2C3E50;       /* Dark slate */
+  --success: #4CAF50;    /* Green */
+  --warning: #FFC107;    /* Yellow */
+  --danger: #E74C3C;     /* Red */
+}
+
+body {
+  background-color: var(--light);
+  color: var(--dark);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+.navbar {
+  background-color: var(--primary) !important;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar a {
+  color: white !important;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.navbar a:hover {
+  background-color: rgba(255,255,255,0.1);
+  text-decoration: none;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.login-container, .register-container {
+  max-width: 500px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.form-control {
+  border-radius: 4px;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--secondary);
+  transform: translateY(-1px);
+}
+
+.alert {
+  border-radius: 4px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--light);
+}
+
+.table {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.table thead th {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(42,92,130,0.03);
+}
+
+.profile-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+@media (max-width: 768px) {
+  .container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+}
