@@ -4,47 +4,63 @@ import com.project.staffguard.model.Role;
 import com.project.staffguard.model.User;
 import com.project.staffguard.repository.RoleRepository;
 import com.project.staffguard.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
 import java.util.Set;
 
-@Configuration
+@Component
 @RequiredArgsConstructor
-public class DataInitializer implements CommandLineRunner {
+public class DataInitializer {
+    private final RoleRepository roleRepo;
+    private final UserRepository userRepo;
+    private final PasswordEncoder encoder;
 
-    private final RoleRepository roleRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-
-    @Override
-    public void run(String... args) throws Exception {
-        // Ensure that the roles exist
-        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+    @PostConstruct
+    public void init() {
+        // Create roles
+        Role adminRole = roleRepo.findByName("ROLE_ADMIN")
                 .orElseGet(() -> {
-                    Role role = new Role();
-                    role.setName("ROLE_ADMIN");
-                    return roleRepository.save(role);
+                    Role r = new Role();
+                    r.setName("ROLE_ADMIN");
+                    return roleRepo.save(r);
                 });
 
-        Role employeeRole = roleRepository.findByName("ROLE_EMPLOYEE")
+        Role hrRole = roleRepo.findByName("ROLE_HR_STAFF")
                 .orElseGet(() -> {
-                    Role role = new Role();
-                    role.setName("ROLE_EMPLOYEE");
-                    return roleRepository.save(role);
+                    Role r = new Role();
+                    r.setName("ROLE_HR_STAFF");
+                    return roleRepo.save(r);
                 });
 
-        // Create a default admin user if one doesn't exist
-        if (userRepository.findByUsername("admin").isEmpty()) {
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword(passwordEncoder.encode("adminpass")); // Change the password as needed
-            admin.setEmail("admin@example.com");
-            admin.setRoles(Set.of(adminRole));
-            userRepository.save(admin);
-            System.out.println("Admin user created: username=admin, password=adminpass");
-        }
+        Role empRole = roleRepo.findByName("ROLE_EMPLOYEE")
+                .orElseGet(() -> {
+                    Role r = new Role();
+                    r.setName("ROLE_EMPLOYEE");
+                    return roleRepo.save(r);
+                });
+
+        // Clear existing users
+        userRepo.deleteAll();
+
+        // Create admin
+        saveUser("admin", "adminpass", Set.of(adminRole));
+
+        // Create 5 normal users
+        saveUser("alice", "password1", Set.of(empRole));
+        saveUser("bob",   "password2", Set.of(empRole));
+        saveUser("carol", "password3", Set.of(empRole));
+        saveUser("dave",  "password4", Set.of(empRole));
+        saveUser("eve",   "password5", Set.of(empRole));
+    }
+
+    private void saveUser(String username, String rawPassword, Set<Role> roles) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(encoder.encode(rawPassword));
+        user.setRoles(roles);
+        userRepo.save(user);
     }
 }

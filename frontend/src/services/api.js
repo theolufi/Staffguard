@@ -1,22 +1,12 @@
 import axios from 'axios';
+const API_URL = process.env.REACT_APP_API_URL || 'https://localhost:8443';
 
-const api = axios.create({
-  baseURL: 'https://localhost:8443',
-  withCredentials: true,
-});
+const api = axios.create({ baseURL: API_URL });
 
-// Add CSRF token to all requests
-api.interceptors.request.use(config => {
-  const csrfToken = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('XSRF-TOKEN='))
-    ?.split('=')[1];
-
-  if (csrfToken) {
-    config.headers['X-XSRF-TOKEN'] = csrfToken;
-  }
-
-  return config;
+api.interceptors.request.use(cfg => {
+    const token = localStorage.getItem('jwt');
+    if (token) cfg.headers['Authorization'] = 'Bearer ' + token;
+    return cfg;
 });
 
 export default api;

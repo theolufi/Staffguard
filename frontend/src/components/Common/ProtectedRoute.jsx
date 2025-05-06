@@ -7,7 +7,11 @@ const ProtectedRoute = ({ roles, children }) => {
   const location = useLocation();
 
   if (loading) {
-    return <div className="text-center mt-5"><Spinner animation="border" /></div>;
+    return (
+        <div className="text-center mt-5">
+          <Spinner animation="border" />
+        </div>
+    );
   }
 
   if (!user) {
@@ -15,8 +19,12 @@ const ProtectedRoute = ({ roles, children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (roles && !user.roles.some(role => roles.includes(role.name))) {
-    console.warn(`Access denied for user: ${user.username} (Roles: ${user.roles.map(r => r.name).join(", ")})`);
+  // roles is an array of strings, e.g. ["ROLE_ADMIN"]
+  if (
+      Array.isArray(roles) &&
+      !user.roles.some(userRole => roles.includes(userRole))
+  ) {
+    console.warn(`Access denied for user: ${user.username}`);
     return <Navigate to="/" replace />;
   }
 

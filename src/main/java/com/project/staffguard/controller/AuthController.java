@@ -1,22 +1,37 @@
+// src/main/java/com/project/staffguard/controller/AuthController.java
 package com.project.staffguard.controller;
 
+import com.project.staffguard.config.JwtUtils;
 import com.project.staffguard.dto.UserDTO;
 import com.project.staffguard.model.User;
 import com.project.staffguard.service.UserService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
+    private final AuthenticationManager authManager;
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
+
+    public AuthController(AuthenticationManager authManager,
+                          UserService userService,
+                          JwtUtils jwtUtils) {
+        this.authManager = authManager;
+        this.userService = userService;
+        this.jwtUtils = jwtUtils;
+    }
+
     @PostMapping("/register")
     public ResponseEntity<User> registerUser(@RequestBody UserDTO dto) {
         return ResponseEntity.ok(userService.registerUser(dto));
@@ -24,16 +39,39 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserDTO dto) {
-        User user = userService.findByUsername(dto.getUsername());
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+        try {
+            Authentication auth = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
+            );
+            User user = (User) auth.getPrincipal();
+            String jwt = jwtUtils.generateToken(auth);
+
+            // return both token *and* user
+            Map<String,Object> body = Map.of(
+                    "token", jwt,
+                    "user", Map.of(
+                            "id",       user.getId(),
+                            "username", user.getUsername(),
+                            "roles",    user.getRoles()
+                                    .stream()
+                                    .map(r->r.getName())
+                                    .collect(Collectors.toList())
+                    )
+            );
+
+            return ResponseEntity.ok(body);
+        } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
-        // Return the user or a DTO (preferably a sanitized version, not the raw entity)
-        return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/api/auth/me")
-    public ResponseEntity<User> getCurrentUser(Principal principal) {
-        return ResponseEntity.ok(userService.findByUsername(principal.getName()));
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        // After filter, principal is your UserDetails (your User entity)
+        var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!(principal instanceof User)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(principal);
     }
 }

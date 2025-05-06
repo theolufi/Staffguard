@@ -9,7 +9,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    roles: ['EMPLOYEE'] // Default role
+    roles: ['ROLE_EMPLOYEE'] // Default role
   });
 
   const handleSubmit = async (e) => {

@@ -3,6 +3,7 @@ package com.project.staffguard.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Set;
@@ -28,12 +29,10 @@ public class User implements UserDetails {
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Role> roles;
 
-    // --- Override UserDetails methods ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Convert roles to GrantedAuthority objects
         return roles.stream()
-                .map(role -> (GrantedAuthority) role::getName)
+                .map(role -> new SimpleGrantedAuthority(role.getName())) // Ensure role names start with ROLE_
                 .collect(Collectors.toList());
     }
 
