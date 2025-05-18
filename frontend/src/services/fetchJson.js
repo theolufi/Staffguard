@@ -7,38 +7,35 @@ function getJwtToken() {
     return localStorage.getItem('jwt');
 }
 
-// Helper to GET JSON, sending the Bearer token automatically
-export async function fetchJson(path) {
+// Core request function: sends JWT on every call, handles JSON bodies and parsing
+async function request(path, { method = 'GET', body } = {}) {
     const token = getJwtToken();
-    const res = await fetch(`${API}${path}`, {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
-    });
-    if (!res.ok) {
-        throw new Error(`Error ${res.status} fetching ${path}`);
-    }
-    return res.json();
-}
 
-// Helper to send any JSON body (POST/PATCH/DELETE), sending Bearer token
-export async function sendJson(path, { method, body }) {
-    const token = getJwtToken();
+    const headers = {
+        'Accept': 'application/json',
+        ...(body != null ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+
     const res = await fetch(`${API}${path}`, {
         method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(body)
+        headers,
+        body: body != null ? JSON.stringify(body) : undefined,
     });
+
     if (!res.ok) {
         throw new Error(`Error ${res.status} ${method} ${path}`);
     }
-    // parse JSON only if present
-    return res.headers.get('Content-Type')?.includes('application/json')
-        ? res.json()
-        : undefined;
+
+    // If there's no JSON to parse (e.g. DELETE returns 204), just return
+    const ct = res.headers.get('Content-Type') || '';
+    if (!ct.includes('application/json')) {
+        return;
+    }
+
+    return res.json();
 }
+
+// Public helpers
+export const fetchJson = (path) => request(path);
+export const sendJson = (path, { method, body }) => request(path, { method, body });

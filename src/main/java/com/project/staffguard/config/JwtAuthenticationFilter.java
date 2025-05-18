@@ -16,8 +16,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -44,19 +42,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = j.getBody();
                 String username = claims.getSubject();
 
-                // Load *your* User entity, which implements UserDetails
+                // Load user from database
                 UserDetails userDetails = userService.loadUserByUsername(username);
 
-                // Rebuild authorities from the token (or from userDetails.getAuthorities())
-                @SuppressWarnings("unchecked")
-                List<String> roles = (List<String>) claims.get("roles");
+                // Set authentication using authorities from userDetails (not from token)
                 var auth = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
-                        roles.stream()
-                                .map(r -> new org.springframework.security.core.authority.SimpleGrantedAuthority(r))
-                                .collect(Collectors.toList())
+                        userDetails.getAuthorities()
                 );
+
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (JwtException ex) {
                 SecurityContextHolder.clearContext();

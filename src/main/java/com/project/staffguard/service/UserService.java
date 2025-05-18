@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;   // <— correct import
 
 import java.util.List;
 import java.util.Set;
@@ -18,31 +19,35 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class UserService implements UserDetailsService { // Implement UserDetailsService
+public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Required for Spring Security authentication
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-    public User registerUser(UserDTO dto) {
+    @Transactional
+    public User createUser(UserDTO dto) {
+        if (userRepository.existsByUsername(dto.getUsername())) {
+            throw new RuntimeException("Username already taken");
+        }
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setEmail(dto.getEmail());
 
         Set<Role> roles = dto.getRoles().stream()
                 .map(roleName ->
-                        roleRepository.findByName("ROLE_" + roleName)
+                        roleRepository.findByName(roleName)
                                 .orElseThrow(() -> new RuntimeException("Role not found: ROLE_" + roleName))
                 )
                 .collect(Collectors.toSet());
-
         user.setRoles(roles);
+
         return userRepository.save(user);
     }
 
@@ -55,22 +60,43 @@ public class UserService implements UserDetailsService { // Implement UserDetail
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public User findByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    @Transactional
+    public User updateUser(Long id, UserDTO dto) {
+        User existing = getUserById(id);
+
+        if (dto.getUsername() != null && !dto.getUsername().equals(existing.getUsername())) {
+            if (userRepository.existsByUsername(dto.getUsername())) {
+                throw new RuntimeException("Username already taken");
+            }
+            existing.setUsername(dto.getUsername());
+        }
+
+        if (dto.getPassword() != null) {
+            existing.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+
+        if (dto.getEmail() != null) {
+            existing.setEmail(dto.getEmail());
+        }
+
+        if (dto.getRoles() != null) {
+            Set<Role> roles = dto.getRoles().stream()
+                    .map(roleName ->
+                            roleRepository.findByName(roleName)
+                                    .orElseThrow(() -> new RuntimeException("Role not found: " + roleName))
+                    )
+                    .collect(Collectors.toSet());
+            existing.setRoles(roles);
+        }
+
+        return userRepository.save(existing);
     }
 
-    public User updateUser(Long id, User updatedUser) {
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (updatedUser.getEmail() != null) {
-            existingUser.setEmail(updatedUser.getEmail());
+    @Transactional
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found");
         }
-        if (updatedUser.getUsername() != null) {
-            existingUser.setUsername(updatedUser.getUsername());
-        }
-
-        return userRepository.save(existingUser);
+        userRepository.deleteById(id);
     }
 }

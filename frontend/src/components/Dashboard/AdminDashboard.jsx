@@ -1,37 +1,72 @@
 import { useState, useEffect } from 'react';
-import { fetchJson } from '../../services/fetchJson';
-import { Button, Table } from 'react-bootstrap';
+import { fetchJson, sendJson } from '../../services/fetchJson';
+import { Button, Table, Modal } from 'react-bootstrap';
+import UserForm from './UserForm';
 
 const AdminDashboard = () => {
-  const [users, setUsers]   = useState([]);
-  const [error, setError]   = useState(null);
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState();
+  const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchJson('/api/users');
-        setUsers(Array.isArray(data) ? data : [data]);
-      } catch (err) {
-        console.error(err);
-        setError(err.message);
-      }
-    })();
+    load();
   }, []);
 
-  if (error) {
-    return <div className="alert alert-danger">Error loading users: {error}</div>;
+  async function load() {
+    try {
+      const data = await fetchJson('/api/users');
+      setUsers(data);
+    } catch (e) {
+      setError(e.message);
+    }
   }
+
+  const handleAdd = () => {
+    setEditingUser(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = (u) => {
+    setEditingUser(u);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (u) => {
+    if (!window.confirm(`Delete ${u.username}?`)) return;
+    try {
+      await sendJson(`/api/users/${u.id}`, { method: 'DELETE' });
+      await load();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const handleSave = async (u) => {
+    try {
+      if (u.id) {
+        await sendJson(`/api/users/${u.id}`, { method: 'PUT', body: u });
+      } else {
+        await sendJson('/api/users', { method: 'POST', body: u });
+      }
+      setShowForm(false);
+      await load();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   return (
       <div>
         <h3>User Management</h3>
-        <Button variant="success" className="mb-3" disabled>
-          <i className="bi bi-plus-lg"></i> Add User (TBD)
+        {error && <div className="alert alert-danger">{error}</div>}
+        <Button onClick={handleAdd} className="mb-3">
+          Add User
         </Button>
         <Table striped hover>
           <thead>
           <tr>
-            <th>ID</th><th>Username</th><th>Email</th><th>Roles</th>
+            <th>ID</th><th>Username</th><th>Email</th><th>Roles</th><th>Actions</th>
           </tr>
           </thead>
           <tbody>
@@ -40,11 +75,30 @@ const AdminDashboard = () => {
                 <td>{u.id}</td>
                 <td>{u.username}</td>
                 <td>{u.email || '-'}</td>
-                <td>{u.roles.map(r=>r.name.replace('ROLE_','')).join(', ')}</td>
+                <td>{u.roles.map(r=>r.name).join(', ')}</td>
+                <td>
+                  <Button size="sm" onClick={()=>handleEdit(u)}>Edit</Button>{' '}
+                  <Button size="sm" variant="danger" onClick={()=>handleDelete(u)}>
+                    Delete
+                  </Button>
+                </td>
               </tr>
           ))}
           </tbody>
         </Table>
+
+        <Modal show={showForm} onHide={()=>setShowForm(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>{editingUser ? 'Edit User' : 'New User'}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <UserForm
+                user={editingUser}
+                onCancel={()=>setShowForm(false)}
+                onSave={handleSave}
+            />
+          </Modal.Body>
+        </Modal>
       </div>
   );
 };
